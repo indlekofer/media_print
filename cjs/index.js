@@ -38,8 +38,8 @@ var setup = function setup() {
     if (window.matchMedia) {
       window.matchMedia('print').addListener(__mql);
     } else {
-      window.addEventListener("beforeprint", __configTrue);
-      window.addEventListener("afterprint", config);
+      window.addEventListener('beforeprint', __configTrue);
+      window.addEventListener('afterprint', config);
     }
   }
 };
@@ -51,8 +51,8 @@ var unset = function unset() {
     if (window.matchMedia) {
       window.matchMedia('print').removeListener(__mql);
     } else {
-      window.removeEventListener("beforeprint", __configTrue);
-      window.removeEventListener("afterprint", config);
+      window.removeEventListener('beforeprint', __configTrue);
+      window.removeEventListener('afterprint', config);
     }
   }
 };
