@@ -7,9 +7,12 @@ function handleChangeTest(done, print) {
   assert.equal(print, state);
   done();
 }
-describe('config', () => {
-  var unsubscribe;
 
+describe('config', () => {
+  let unsubscribe;
+  beforeEach(() => {
+    store.dispatch({type: '@indlekofer/media/TYPE_CHANGE', payload: {key: GET_PRINT, value: null}});
+  }); 
   afterEach(() => {
     unsubscribe();
   });

@@ -1,67 +1,98 @@
 import assert from 'assert';
 import store from '@indlekofer/redux-store';
+import matchMedia, { reset, setData, getCall } from './matchMedia';
 import { GET_PRINT, REDUCER, config, setup, unset } from '../src/index';
 
-function getNewWindow() {
-  return function () {
-    this.testAdd = 0;
-    this.testRemove = 0;
-    this.testPrintTrue = 0;
-    this.testPrintFalse = 0;
-    this.addEventListener = function (name, func) {this.testAdd++};
-    this.removeEventListener = function (name, func) {this.testRemove++};
-  };
+function handleChangeTest(done, print) {
+  const state = store.getState()[REDUCER].get(GET_PRINT)
+  assert.equal(print, state);
+  done();
 }
-function getNewMatchMediaWindow(shoudl) {
-  var matchMedia = new (function () {
-    this.testAdd = 0;
-    this.testRemove = 0;
-    this.addListener = function () { this.testAdd++ };
-    this.removeListener = function () { this.testRemove++ };
+
+describe('setup', () => {
+  let unsubscribe;
+
+  beforeEach(() => {
+    global.window = { matchMedia };
+    store.dispatch({type: '@indlekofer/media/TYPE_CHANGE', payload: {key: GET_PRINT, value: null}});
   });
 
-  return function () {
-    this.testAdd = 0;
-    this.testRemove = 0;
-    this.addEventListener = function () { this.testAdd++ };
-    this.removeEventListener = function () { this.testRemove++ };
-    this.matchMedia = function () { return matchMedia };
-  };
-}
-describe('setup', () => {
-  beforeEach(() => {
-    global.window = new (getNewWindow());
-  });
-  it('check setup without match media', () => {
-    setup();
-    assert.equal(window.testAdd, 2);
-    assert.equal(window.testRemove, 0);
-  });
-  it('check unset without match media', () => {
+  afterEach(() => {
+    unsubscribe();
     unset();
-    assert.equal(window.testAdd, 0);
-    assert.equal(window.testRemove, 2);
+    reset();
   });
-  it('check setup with match media', () => {
-    global.window = new (getNewMatchMediaWindow());
-    setup();
-    assert.equal(window.testAdd, 0);
-    assert.equal(window.testRemove, 0);
-    assert.equal(window.matchMedia().testAdd, 1);
-    assert.equal(window.matchMedia().testRemove, 0);
-  });
-  it('check unset with match media', () => {
-    global.window = new (getNewMatchMediaWindow());
-    unset();
-    assert.equal(window.testAdd, 0);
-    assert.equal(window.testRemove, 0);
-    assert.equal(window.matchMedia().testAdd, 0);
-    assert.equal(window.matchMedia().testRemove, 1);
-  });
-  it('check unset with undefinedwindow', () => {
+
+  it('initial without window', (done) => {
     global.window = undefined;
-    unset();
-    assert.equal(typeof window === 'undefined', true);
+    unsubscribe = store.subscribe(handleChangeTest.bind(null, done, null));
+    setup();
+  });
+  it('initial with empty window', (done) => {
+    global.window = {};
+    unsubscribe = store.subscribe(handleChangeTest.bind(null, done, null));
+    setup();
+  });
+  it('init false', (done) => {
+    setData('matches', false);
+    unsubscribe = store.subscribe(handleChangeTest.bind(null, done, false));
+    setup();
+  });
+  it('init true', (done) => {
+    setData('matches', true);
+    unsubscribe = store.subscribe(handleChangeTest.bind(null, done, true));
+    setup();
+  });
+  it('basic setup', () => {
+    setData('matches', false);
+    setup();
+    assert.equal(1, getCall('addEventListener').change);
+    assert.equal(0, getCall('removeEventListener').change);
+  });
+  it('multiple setup calls should unset', () => {
+    setData('matches', false);
+    setup();
+    setup();
+    assert.equal(2, getCall('addEventListener').change);
+    assert.equal(1, getCall('removeEventListener').change);
+    assert.equal(0, getCall('addListener'));
+    assert.equal(0, getCall('removeListener'));
+  });
+  it('basic setup addListener', () => {
+    setData('matches', false);
+    setData('addEventListener', undefined);
+    setData('removeEventListener', undefined);
+    setup();
+    assert.equal(undefined, getCall('addEventListener'));
+    assert.equal(undefined, getCall('removeEventListener'));
+    assert.equal(1, getCall('addListener'));
+    assert.equal(0, getCall('removeListener'));
+  });
+  it('basic setup no listeners', () => {
+    setData('matches', false);
+    setData('addEventListener', undefined);
+    setData('removeEventListener', undefined);
+    setData('addListener', undefined);
+    setData('removeListener', undefined);
+    setup();
+    assert.equal(undefined, getCall('addEventListener'));
+    assert.equal(undefined, getCall('removeEventListener'));
+    assert.equal(undefined, getCall('addListener'));
+    assert.equal(undefined, getCall('removeListener'));
+  });
+  it('window listeners', () => {
+		let testAdd = 0, testRemove = 0;
+		global.window = {
+			addEventListener: () => { testAdd++ },
+			removeEventListener: () => { testRemove++ }
+		}
+    setup();
+		//each setup calls two times
+    assert.equal(2, testAdd);
+    assert.equal(0, testRemove);
+    setup();
+    assert.equal(4, testAdd);
+    assert.equal(2, testRemove);
   });
 });
 
